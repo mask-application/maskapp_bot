@@ -82,7 +82,8 @@ def use_my_avatar(update: Update, context: CallbackContext):
     image.download(image_file_name)
 
     try:
-        mask_bandi.main(source="file", input_dir=image_file_name, output_dir=image_file_name_output, decorate=True)
+        mask_bandi.main(source="file", input_dir=image_file_name, output_dir=image_file_name_output,
+                        decorate=True, method=2)
     except:
         update.message.reply_text("امکان ماسک نصب کردن برای تصویر پروفایل شما وجود ندارد." + resend_message)
         return

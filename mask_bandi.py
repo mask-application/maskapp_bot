@@ -4,6 +4,7 @@ import os
 import time
 
 import cv2
+import dlib
 import face_alignment
 import numpy as np
 from skimage.transform import warp, PolynomialTransform
@@ -17,38 +18,65 @@ RIGHT_EAR_UPPER_MIDDLE = 15
 RIGHT_EAR_LOWER_MIDDLE = 14
 RIGHT_EAR_BOTTOM = 13
 NOSE_BOTTOM = 33
-NOSE_MIDDLE = 29
+NOSE_MIDDLE = 28
 NOSE_TOP = 27
 LIP = 57
 CHIN = 8
-CHIN_LEFT = 6
-CHIN_RIGHT = 10
+LEFT_CHIN = 5
+RIGHT_CHIN = 11
+LEFT_EYEBROW = 19
+RIGH_EYEBROW = 24
 
 MASK_BANDI_PATH = "./mask_bandi.png"
-MASK_BANDI_COORDINATES = [[345, 475], [355, 770], [1155, 475], [1145, 770],
-                          [750, 290], [750, 870]]
+MASK_BANDI_COORDINATES = [[351, 505], [335, 717], [1149, 505], [1165, 717],
+                          [750, 375], [750, 550],
+                          [750, 960], [430, 880], [1070, 880],
+                          [560, 310], [940, 310]]
 MASK_BANDI_CORRESPONDING = [LEFT_EAR_TOP, LEFT_EAR_BOTTOM, RIGHT_EAR_TOP, RIGHT_EAR_BOTTOM,
-                            NOSE_TOP, CHIN]
+                            NOSE_MIDDLE, NOSE_BOTTOM,
+                            CHIN, LEFT_CHIN, RIGHT_CHIN,
+                            LEFT_EYEBROW, RIGH_EYEBROW]
 
 DECORATION_PATH = "./circle.png"
 
+DLIB_PREDICTOR_PATH = "./shape_predictor_68_face_landmarks.dat"
+
 
 class MaskBandi:
-    def __init__(self, mask_images, mask_src_coordinates, mask_dst_coordinates,
-                 decoration_img=None, debug=False):
+    def __init__(self, mask_images, mask_src_coordinates, mask_dst_coordinates, decoration_img=None,
+                 face_detection_method="fa", debug=False):
         self.mask_images = mask_images
         self.mask_src_coordinates = mask_src_coordinates
         self.mask_dst_coordinates = mask_dst_coordinates
         self.decoration_img = decoration_img
+        self.face_detection_method = face_detection_method
         self.debug = debug
 
-        self.face_alignment = face_alignment.FaceAlignment(face_alignment.LandmarksType._2D,
-                                                           device='cpu', flip_input=False)
+        if self.face_detection_method == "fa":
+            self.face_alignment = face_alignment.FaceAlignment(face_alignment.LandmarksType._2D,
+                                                               device='cpu', flip_input=False)
+        elif self.face_detection_method == "dlib":
+            self.detector = dlib.get_frontal_face_detector()
+            self.predictor = dlib.shape_predictor(DLIB_PREDICTOR_PATH)
+
+    def get_face_landmarks(self, img):
+        if self.face_detection_method == "fa":
+            faces = self.face_alignment.get_landmarks_from_image(img)
+            if faces is None:
+                return []
+            return faces
+        elif self.face_detection_method == "dlib":
+            faces = []
+            detected_faces = self.detector(img, 1)
+            for face in detected_faces:
+                face_shape = self.predictor(img, face)
+                faces.append(np.asarray([(face_shape.part(i).x, face_shape.part(i).y)
+                                         for i in range(face_shape.num_parts)]))
+            return faces
+        return []
 
     def add_mask(self, img):
-        faces = self.face_alignment.get_landmarks_from_image(img)
-        if faces is None:
-            return
+        faces = self.get_face_landmarks(img)
 
         for face in faces:
             for mask_img, mask_src_cor, mask_dst_cor in \
@@ -60,10 +88,10 @@ class MaskBandi:
                 transform.estimate(dst_pts, src_pts, order=2)
 
                 mask_aligned = warp(mask_img, transform, output_shape=(img.shape[0], img.shape[1])) * 255
-                mask_aligned[:int(face[:, 1].min()), :, :] = 0
-                mask_aligned[int(face[:, 1].max()):, :, :] = 0
-                mask_aligned[:, :int(face[:, 0].min()), :] = 0
-                mask_aligned[:, int(face[:, 0].max()):, :] = 0
+                mask_aligned[:int(face[:, 1].min() - 5), :, :] = 0
+                mask_aligned[int(face[:, 1].max() + 5):, :, :] = 0
+                mask_aligned[:, :int(face[:, 0].min() - 5), :] = 0
+                mask_aligned[:, int(face[:, 0].max() + 5):, :] = 0
 
                 alpha = mask_aligned[:, :, [3]] / 255.
                 img = (img * (1 - alpha)) + mask_aligned[:, :, :3] * alpha
@@ -113,7 +141,13 @@ def main(source, input_dir=None, output_dir=None, decorate=False, method=1, debu
                                mask_src_coordinates=[MASK_BANDI_COORDINATES],
                                mask_dst_coordinates=[MASK_BANDI_CORRESPONDING],
                                decoration_img=cv2.imread(DECORATION_PATH, cv2.IMREAD_UNCHANGED),
-                               debug=debug)
+                               face_detection_method="fa", debug=debug)
+    elif method == 2:
+        mask_bandi = MaskBandi(mask_images=[cv2.imread(MASK_BANDI_PATH, cv2.IMREAD_UNCHANGED)],
+                               mask_src_coordinates=[MASK_BANDI_COORDINATES],
+                               mask_dst_coordinates=[MASK_BANDI_CORRESPONDING],
+                               decoration_img=cv2.imread(DECORATION_PATH, cv2.IMREAD_UNCHANGED),
+                               face_detection_method="dlib", debug=debug)
     if source == "webcam":
         webcam = cv2.VideoCapture(0)
 
