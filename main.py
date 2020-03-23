@@ -21,7 +21,8 @@ start_message = "سلام هم‌وطن.\nاین" \
                 "به کاهش قربانیان کرونا در ایران کمک کنند. لطفا برای افزودن ماسک به تصویر پروفایل‌تان روی دستور " \
                 "/mask_my_avatar بزنید. برای ماسک نصب کردن روی یک عکس دیگر هم آن عکس را همین‌جا ارسال کنید. به محض " \
                 "اماده شدن عکس ماسک‌دارتان برایتان ارسال می‌شود. ببخشید اگر به خاطر ترافیک بالا چند دقیقه‌ای طول کشید." \
-                " عکس باید از روبرو گرفته شده باشد. عکس‌تان فقط برای خودتان ارسال می‌شود و جایی نگه داشته نمی‌شود."
+                " عکس باید از روبرو گرفته شده باشد. عکس‌تان فقط برای خودتان ارسال می‌شود و جایی نگه داشته نمی‌شود.\n " \
+                "https://cafebazaar.ir/app/ir.covidapp.android"
 
 _simple_bot = _updater = _request = None
 
@@ -76,7 +77,7 @@ def use_my_avatar(update: Update, context: CallbackContext):
     logging.info("userid:%s photo:%s" % (user.id, photos))
     photo = get_photo(photos)
     if not photo:
-        update.message.reply_text('متاسفانه عکس شما دارای اندازه مناسبی نیست' + resend_message)
+        update.message.reply_text('متاسفانه عکس شما دارای اندازه مناسبی نیست' + "\n" + resend_message)
         return
     image = context.bot.get_file(photo['file_id'])
     image_file_name = 'images/%d.jpg' % user.id
@@ -86,14 +87,14 @@ def use_my_avatar(update: Update, context: CallbackContext):
     try:
         mask_bandi.main(source="file", input_dir=image_file_name, output_dir=image_file_name_output, decorate=True)
     except:
-        update.message.reply_text("امکان ماسک نصب کردن برای تصویر پروفایل شما وجود ندارد." + resend_message)
+        update.message.reply_text("امکان ماسک نصب کردن برای تصویر پروفایل شما وجود ندارد." + "\n" + resend_message)
         return
 
     f = open(image_file_name_output, "rb")
     update.message.reply_photo(photo=f, caption='برای تغییر عکس پروفایل‌تان به این عکس باید '
                                                 'این تصویر را روی گوشی‌تان ذخیره کنید و سپس در بخش تنظیمات پروفایل‌تان'
-                                                ' در تلگرام/اینستاگرام/توییتر آن را تصویر جدید پروفایل‌تان کنید' +
-                                                resend_message)
+                                                ' در تلگرام/اینستاگرام/توییتر آن را تصویر جدید پروفایل‌تان کنید.' +
+                                                "\n" + resend_message)
     try:
         os.remove(image_file_name)
         os.remove(image_file_name_output)
