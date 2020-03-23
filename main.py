@@ -10,14 +10,16 @@ import mask_bandi
 from configs import CONFIG_ID, bot_token
 from utils import config_logging
 
+please_wait_message = "لطفا منتظر بمانید. (با توجه به زیادی درخواست ها ممکن است پاسخگویی به درخواست شما " \
+                      "از چند ثانیه تا چند ساعت به طول انجامد)"
+resend_message = ("لطفا برای ماسک نصب کردن برای تصویر پروفایل تان دستور /mask_my_avatar را بزنید و یا ",
+                  "لطفا برای ماسک نصب کردن برای تصویر پروفایل تان دستور /mask_my_avatar را بزنید و یا ",
+                  "")[CONFIG_ID] + 'برای ماسک نصب کردن روی یک عکس، آن را ارسال کنید.'
 start_message = "سلام دوست عزیز.\n" \
                 "این بات به شما کمک می‌کند که با افزودن ماسک به عکس پروفایل‌تان " \
                 "در رسانه‌های اجتماعی و پیام‌رسان‌های موبایلی به پویش مردمی علیه کرونا بپیوندید و" \
-                " از هم‌وطنانتان دعوت کنید با نصب اپلیکیشن «ماسک» به کاهش قربانیان کرونا در ایران کمک کنند"
-please_wait_message = "لطفا منتظر بمانید. (با توجه به زیادی درخواست ها ممکن است پاسخگویی به درخواست شما " \
-                      "از چند ثانیه تا چند ساعت به طول انجامد)"
-resend_message = ('برای شروع مجدد /start را بزنید و یا ', 'برای شروع مجدد /start را بزنید و یا ', '')[
-                     CONFIG_ID] + 'برای ماسک نصب کردن روی یک عکس، آن را ارسال کنید.'
+                "\n از هم‌وطنانتان دعوت کنید با نصب اپلیکیشن «ماسک» به کاهش قربانیان کرونا در ایران کمک کنند" \
+                + resend_message
 
 _simple_bot = _updater = _request = None
 
@@ -33,6 +35,13 @@ proxy_url, base_url, base_file_url = Configs[CONFIG_ID]
 def start(update: Update, _context: CallbackContext):
     chat, user = update.effective_chat, update.effective_user
     logging.debug('/start from user:{%s} chat:{%s}' % (user.id, chat and chat.id))
+    update.message.reply_photo(photo=open("example.jpg", "rb"), caption=start_message)
+
+
+@run_async
+def mask_my_avatar(update: Update, _context: CallbackContext):
+    chat, user = update.effective_chat, update.effective_user
+    logging.debug('/mask from user:{%s} chat:{%s}' % (user.id, chat and chat.id))
     use_my_avatar(update, _context)
 
 
@@ -48,21 +57,19 @@ def use_my_avatar(update: Update, context: CallbackContext):
     assert isinstance(user, User)
     if update.message.photo:
         photos = update.message.photo
-    else:
-        update.message.reply_photo(photo=open("example.jpg", "rb"), caption=start_message)
-        if CONFIG_ID != 2:
-            photos = user.get_profile_photos()
-            if photos['total_count'] == 0:
-                update.message.reply_text(
-                    'شما تصویر پروفایلی ندارید. اگر در تنظیمات امنیتی تلگرام مشخص کرده‌اید که فقط '
-                    'مخاطبین شما دسترسی به تصویر پروفایلتان داشته باشند،'
-                    ' لطفا این تنظیم را به «همه» تغییر'
-                    'دهید. ')
-                return
-            photos = photos['photos'][0]
-        else:
-            update.message.reply_text(resend_message)
+    elif update.message.text == "/mask_my_avatar" and CONFIG_ID != 2:
+        photos = user.get_profile_photos()
+        if photos['total_count'] == 0:
+            update.message.reply_text(
+                'شما تصویر پروفایلی ندارید. اگر در تنظیمات امنیتی تلگرام مشخص کرده‌اید که فقط '
+                'مخاطبین شما دسترسی به تصویر پروفایلتان داشته باشند،'
+                ' لطفا این تنظیم را به «همه» تغییر'
+                'دهید. ')
             return
+        photos = photos['photos'][0]
+    else:
+        update.message.reply_text(resend_message)
+        return
     update.message.reply_text(please_wait_message)
     logging.info("userid:%s photo:%s" % (user.id, photos))
     photo = get_photo(photos)
@@ -77,7 +84,7 @@ def use_my_avatar(update: Update, context: CallbackContext):
     try:
         mask_bandi.main(source="file", input_dir=image_file_name, output_dir=image_file_name_output, decorate=True)
     except:
-        update.message.reply_text("امکان ماسک نصب کردن برای آواتار شما وجود ندارد." + resend_message)
+        update.message.reply_text("امکان ماسک نصب کردن برای تصویر پروفایل شما وجود ندارد." + resend_message)
         return
 
     f = open(image_file_name_output, "rb")
@@ -110,7 +117,8 @@ def main():
     dispatcher = updater.dispatcher
     dispatcher.add_error_handler(error_callback)
     dispatcher.add_handler(CommandHandler('start', start))
-    dispatcher.add_handler(MessageHandler(Filters.all, start))
+    dispatcher.add_handler(CommandHandler('mask_my_avatar', mask_my_avatar))
+    dispatcher.add_handler(MessageHandler(Filters.all, mask_my_avatar))
     updater.start_polling(timeout=10)
     updater.idle()
 
