@@ -1,0 +1,7 @@
+Pillow
+python-telegram-bot
+dlib>=19.19.0
+numpy>=1.18.1
+opencv-python>=4.2.0.32
+scikit-image
+face_alignment
