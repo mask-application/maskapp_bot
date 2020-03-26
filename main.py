@@ -81,24 +81,37 @@ def use_my_avatar(update: Update, context: CallbackContext):
         return
     image = context.bot.get_file(photo['file_id'])
     image_file_name = 'images/%d.jpg' % user.id
-    image_file_name_output = 'images/%d.out.jpg' % user.id
+    image_file_name_output_m2 = 'images/%d_m2.out.jpg' % user.id
+    image_file_name_output_m4 = 'images/%d_m4.out.jpg' % user.id
     image.download(image_file_name)
 
     try:
-        mask_bandi.main(source="file", input_dir=image_file_name, output_dir=image_file_name_output,
+        mask_bandi.main(source="file", input_dir=image_file_name, output_dir=image_file_name_output_m2,
                         decorate=True, method=2)
+        mask_bandi.main(source="file", input_dir=image_file_name, output_dir=image_file_name_output_m4,
+                        decorate=True, method=4)
     except:
         update.message.reply_text("امکان ماسک نصب کردن برای تصویر پروفایل شما وجود ندارد." + "\n" + resend_message)
         return
 
-    f = open(image_file_name_output, "rb")
-    update.message.reply_photo(photo=f, caption='برای تغییر عکس پروفایل‌تان به این عکس باید '
-                                                'این تصویر را روی گوشی‌تان ذخیره کنید و سپس در بخش تنظیمات پروفایل‌تان'
-                                                ' در تلگرام/اینستاگرام/توییتر آن را تصویر جدید پروفایل‌تان کنید.' +
-                                                "\n" + resend_message)
+    f_m2 = open(image_file_name_output_m2, "rb")
+    f_m4 = open(image_file_name_output_m4, "rb")
+    update.message.reply_photo(photo=f_m2,
+                               caption='برای تغییر عکس پروفایل‌تان به این عکس باید '
+                                       'این تصویر را روی گوشی‌تان ذخیره کنید و سپس در بخش تنظیمات پروفایل‌تان'
+                                       ' در تلگرام/اینستاگرام/توییتر آن را تصویر جدید پروفایل‌تان کنید.' +
+                                       "\n" + resend_message)
+    update.message.reply_photo(photo=f_m4,
+                               caption='برای تغییر عکس پروفایل‌تان به این عکس باید '
+                                       'این تصویر را روی گوشی‌تان ذخیره کنید و سپس در بخش تنظیمات پروفایل‌تان'
+                                       ' در تلگرام/اینستاگرام/توییتر آن را تصویر جدید پروفایل‌تان کنید.' +
+                                       "\n" + resend_message)
+    f_m2.close()
+    f_m4.close()
     try:
         os.remove(image_file_name)
-        os.remove(image_file_name_output)
+        os.remove(image_file_name_output_m2)
+        os.remove(image_file_name_output_m4)
     except Exception:
         pass
 
